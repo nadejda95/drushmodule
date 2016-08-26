@@ -2,13 +2,28 @@ import xml.etree.ElementTree as ET
 import time
 import hashlib
 import os
-import logging
+# import logging
 
 
 def setTitle(project, info):
     """ Set title tags to .xml file.
 
+        Creates list of tags and values and generate xml
+        format for title tags.
+        Example:
+            <title>My webform</title>
+            <short_name>mywebform</short_name>
+            <dc:creator>Deeplace</dc:creator>
+            <type>project_module</type>
+            <api_version>7.x</api_version>
+            <recommended_major>1</recommended_major>
+            <supported_major>1</supported_major>
+            <default_major>1</default_major>
+            <project_status>published</project_status>
+            <link>http://deeplace.md/</link>
+
         Parameters:
+            dict(info)
             xml.etree.ElementTree(project)
 
     """
@@ -32,8 +47,33 @@ def setTitle(project, info):
 def setTerms(project, info):
     """ Set terms tags to .xml file.
 
+        Example:
+            <terms>
+                <term>
+                    <name>Project</name>
+                    <value>Modules</value>
+                </term>
+                <term>
+                    <name>Maintenance status</name>
+                    <value>Seeking new maintaner</value>
+                </term>
+                <term>
+                    <name>Development status</name>
+                    <value>No further development</value>
+                </term>
+                <term>
+                    <name>Module categories</name>
+                    <value>Content</value>
+                </term>
+                <term>
+                    <name>Module categories</name>
+                    <value>Import/export</value>
+                </term>
+            </terms>
+
         Parameters:
             xml.etree.ElementTree(project)
+            dict(info)
 
     """
     terms = ET.SubElement(project, "terms")
@@ -53,9 +93,49 @@ def setTerms(project, info):
 
 def setReleases(project, info):
     """ Set releases tags to .xml file.
+        Example:
+            <releases>
+                <release>
+                    <name>mywebform 7.x-1.0</name>
+                    <version>7.x-1.0</version>
+                    <tag>7.x-1.0</tag>
+                    <version_major>1</version_major>
+                    <version_patch>0</version_patch>
+                    <status>published</status>
+                    <release_link>http://drupalupdates.deeplace.md/release-history</release_link>
+                    <download_link>http://drupalupdates.deeplace.md/7.x-2.8.tar.gz</download_link>
+                    <date>1472206272</date>
+                    <mdhash>08a78d6c56a6a4daa9c943fe1ef3e270</mdhash>
+                    <filesize>39166</filesize>
+                    <files>
+                        <file>
+                            <url>http://drupalupdates.deeplace.md/release-history</url>
+                            <archive_type>tar.gz</archive_type>
+                            <md5>08a78d6c56a6a4daa9c943fe1ef3e270</md5>
+                            <size>39166</size>
+                            <filedata>1472206272</filedata>
+                        </file>
+                    </files>
+                    <terms>
+                        <term>
+                            <name>Release type</name>
+                            <value>Security update</value>
+                        </term>
+                        <term>
+                            <name>Release type</name>
+                            <value>Bug fixes</value>
+                        </term>
+                        <term>
+                            <name>Release type</name>
+                            <value>New features</value>
+                        </term>
+                    </terms>
+                </release>
+            </releases>
 
         Parameters:
             xml.etree.ElementTree(project)
+            dict(info)
 
     """
     releases = ET.SubElement(project, "releases")

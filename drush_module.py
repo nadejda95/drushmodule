@@ -5,6 +5,7 @@ import subprocess
 import xml.etree.ElementTree as ET
 import re
 import logging
+# написать логгинг
 import os
 
 import create_xml
@@ -30,10 +31,18 @@ def main():
             drush ddl <module>
 
     """
+    logging.basicConfig(format='%(levelname)s [%(asctime)s]  %(message)s',
+                        level=logging.DEBUG,
+                        filename='mylog.log')
+    logger = logging.getLogger("myLog")
+    logger.info("Programm starts")
+    # get list of tags
     tags = getTagList()
     if tags:
         for tag in tags:
+            # create archive
             createArchive(tag)
+            # create xml
             writeInfoToXML(tag)
 
 
@@ -84,7 +93,7 @@ def writeInfoToXML(tag):
             xml - 7.x.xml
 
         Parameters:
-             str(tag) - tag whicj xml file is creating
+             str(tag) - tag which xml file is creating
 
     """
     info = getInfo(tag)
