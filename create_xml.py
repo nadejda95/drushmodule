@@ -77,11 +77,11 @@ def setTerms(project, info):
 
     """
     terms = ET.SubElement(project, "terms")
-    terms_content = [["Project", "Modules"],
-                     ["Maintenance status", "Seeking new maintaner"],
-                     ["Development status", "No further development"],
-                     ["Module categories", "Content"],
-                     ["Module categories", "Import/export"],
+    terms_content = [["Project", "Modules"],  #
+                     ["Maintenance status", "Seeking new maintaner"],  #
+                     ["Development status", "No further development"],  #
+                     ["Module categories", "Content"],  #
+                     ["Module categories", "Import/export"],  #
                      ]
     for content in terms_content:
         term = ET.SubElement(terms, "term")
@@ -154,11 +154,11 @@ def setReleases(project, info):
     status = ET.SubElement(release, "status")
     status.text = "published"
     release_link = ET.SubElement(release, "release_link")
-    release_link.text = "http://drupalupdates.deeplace.md/release-history"
+    release_link.text = "http://drupalupdates.deeplace.md/release-history"  #
     download_link = ET.SubElement(release, "download_link")
-    download_link.text = "http://drupalupdates.deeplace.md/7.x-2.8.tar.gz"
+    download_link.text = "http://drupalupdates.deeplace.md/7.x-2.8.tar.gz"  #
     date = ET.SubElement(release, "date")
-    date.text = str(int(time.time()))
+    date.text = str(int(time.time()))  #
     mdhash = ET.SubElement(release, "mdhash")
     mdhash.text = hashlib.md5(open("../{0}.tar.gz".format(info['core']),
                               'rb').read()
@@ -168,7 +168,7 @@ def setReleases(project, info):
     files = ET.SubElement(release, "files")
     file = ET.SubElement(files, "file")
     url = ET.SubElement(file, "url")
-    url.text = "http://drupalupdates.deeplace.md/release-history"
+    url.text = "http://drupalupdates.deeplace.md/release-history"  #
     archive_type = ET.SubElement(file, "archive_type")
     archive_type.text = "tar.gz"
     md5 = ET.SubElement(file, "md5")
@@ -177,11 +177,11 @@ def setReleases(project, info):
     size = ET.SubElement(file, "size")
     size.text = str(os.path.getsize("../{0}.tar.gz".format(info['core'])))
     filedata = ET.SubElement(file, "filedata")
-    filedata.text = str(int(time.time()))
+    filedata.text = str(int(time.time()))  #
     terms = ET.SubElement(release, "terms")
-    terms_content = [["Release type", "Security update"],
-                     ["Release type", "Bug fixes"],
-                     ["Release type", "New features"]
+    terms_content = [["Release type", "Security update"],  #
+                     ["Release type", "Bug fixes"],  #
+                     ["Release type", "New features"]  #
                      ]
     for content in terms_content:
         term = ET.SubElement(terms, "term")
