@@ -2,7 +2,6 @@ import xml.etree.ElementTree as ET
 import time
 import hashlib
 import os
-# import logging
 
 
 def setTitle(project, info):

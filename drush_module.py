@@ -5,7 +5,6 @@ import subprocess
 import xml.etree.ElementTree as ET
 import re
 import logging
-# написать логгинг
 import os
 
 import create_xml
@@ -35,15 +34,16 @@ def main():
                         level=logging.DEBUG,
                         filename='mylog.log')
     logger = logging.getLogger("myLog")
-    logger.info("Programm starts")
-    # get list of tags
-    tags = getTagList()
-    if tags:
-        for tag in tags:
-            # create archive
-            createArchive(tag)
-            # create xml
-            writeInfoToXML(tag)
+    try:
+        tags = getTagList()
+        if tags:
+            for tag in tags:
+                createArchive(tag)
+                writeInfoToXML(tag)
+        else:
+            logger.warning("No tags in this repository")
+    except Exception as exc:
+        logger.error("{0} - {1}".format(type(exc), exc.args))
 
 
 def getTagList():
