@@ -38,10 +38,13 @@ def main():
 
 
 def getTagList():
-    """ Get list of tags of current repository.
+    """ Get list of versions of module of current repository.
+
+        Using `git branch` gets all branches of repository. Find
+        branches looks like 7.x or 6.x, creates a list with them.
 
         Return:
-            list of tags if exist tags like 7.x and
+            list of tags if exist tags like 7.x or 6.x and
             empty list if not.
 
     """
@@ -54,21 +57,21 @@ def getTagList():
     return []
 
 
-def createArchive(tags):
-    """ Create archive with files from each tag from tags.
-        Collect all information about module and create dict
-        params for writing to .xml.
+def createArchive(tag):
+    """ Create archive with files for tag fom parameters.
+
+        Using `git archive` creates archive in format <tag>.tar.gz.
+        Example:
+            tag - 7.x
+            archive - 7.x.tar.gz
 
         Parameters:
-            list(tags) - all available tags in needed format.
-
-        Return:
-            dict(param) - all parameters for future writing to .xml.
+            str(tag) - tag from repository.
 
     """
     os.chdir("..")
     subprocess.call("git archive {0} --format=tar.gz\
-                     --output={0}.tar.gz".format(tags), shell=True)
+                     --output={0}.tar.gz".format(tag), shell=True)
     os.chdir("drush_module")
 
 
@@ -76,9 +79,12 @@ def writeInfoToXML(tag):
     """ Create .xml file and write information about modules.
         Standart for .xml:
             https://updates.drupal.org/release-history/migrate/7.x
+        Example:
+            tag - 7.x
+            xml - 7.x.xml
 
         Parameters:
-             dict(param) - all parameters for future writing to .xml.
+             str(tag) - tag whicj xml file is creating
 
     """
     info = getInfo(tag)
@@ -95,6 +101,32 @@ def writeInfoToXML(tag):
 
 
 def getInfo(tag):
+    """ Get information about version.
+
+        Read file <module_name>.info and gets all information from
+        this file. Create dictionary with these parameters.
+        Example:
+            mywebform.info:
+                name = My webform
+                description = Defines a custom webform.
+                package = Deeplace
+                core = 7.x
+                version = 7.x-1.0
+            info:
+                {'package': 'Deeplace',
+                 'description': 'Defines a custom webform.',
+                 'core': '7.x',
+                 'name': 'My webform',
+                 'version': '7.x-1.0'
+                 }
+
+        Parameters:
+            str(tag) - version of module
+
+        Returns:
+            dict(info)
+
+    """
     subprocess.call("git checkout {0}".format(tag), shell=True)
     with open("../mywebform.info") as file:
         temp = file.read().split("\n")
