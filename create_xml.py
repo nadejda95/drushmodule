@@ -9,6 +9,11 @@ def setTitle(project, info):
 
         Creates list of tags and values and generate xml
         format for title tags.
+
+        Parameters:
+            dict(info)
+            xml.etree.ElementTree(project)
+
         Example:
             <title>My webform</title>
             <short_name>mywebform</short_name>
@@ -20,10 +25,6 @@ def setTitle(project, info):
             <default_major>1</default_major>
             <project_status>published</project_status>
             <link>http://deeplace.md/</link>
-
-        Parameters:
-            dict(info)
-            xml.etree.ElementTree(project)
 
     """
     fields = [["title", info['name']],
@@ -45,6 +46,10 @@ def setTitle(project, info):
 
 def setTerms(project, info):
     """ Set terms tags to .xml file.
+
+        Parameters:
+            xml.etree.ElementTree(project)
+            dict(info)
 
         Example:
             <terms>
@@ -70,10 +75,6 @@ def setTerms(project, info):
                 </term>
             </terms>
 
-        Parameters:
-            xml.etree.ElementTree(project)
-            dict(info)
-
     """
     terms = ET.SubElement(project, "terms")
     terms_content = [["Project", "Modules"],
@@ -92,6 +93,11 @@ def setTerms(project, info):
 
 def setReleases(project, info):
     """ Set releases tags to .xml file.
+
+        Parameters:
+            xml.etree.ElementTree(project)
+            dict(info)
+
         Example:
             <releases>
                 <release>
@@ -131,10 +137,6 @@ def setReleases(project, info):
                     </terms>
                 </release>
             </releases>
-
-        Parameters:
-            xml.etree.ElementTree(project)
-            dict(info)
 
     """
     releases = ET.SubElement(project, "releases")
