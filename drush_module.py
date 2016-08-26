@@ -11,6 +11,25 @@ import create_xml
 
 
 def main():
+    """ Python instument for connecting deeplace Drupal
+        modules.
+
+        1) Is executing in git repository hook post-receive
+        of our modules:
+            git@git.work.deeplace.md/deeplace/infrastructure/drupal/<module>
+        2) Gets list of git repository tags looks like 6.x-1.12
+        3) For each tag creates archive <tag>.tar.gz with module cod
+        4) Write all versions of modules into <tag>.xml file with such format
+        compatible with drush dl --source <url>:
+            https://updates.drupal.org/release-history/migrate/7.x
+
+        For install module developer should use command:
+            drush dl --source http://drupalupdates.deeplace.md/
+                                     release-history <module>
+        or alias:
+            drush ddl <module>
+
+    """
     tags = getTagList()
     if tags:
         for tag in tags:
@@ -31,7 +50,6 @@ def getTagList():
                                    ).decode("utf-8").strip()
     if tags not in [" ", "\n"]:
         tags = re.findall(r"\b[6-8]\.x\S*", tags)
-        # print(tags)
         return tags
     return []
 
