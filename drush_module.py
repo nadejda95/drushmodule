@@ -3,7 +3,6 @@
 #
 # Python instrument for connecting deeplace Drupal
 # modules.
-#
 # 1) Is executing in git repository hook post-receive
 # of our modules:
 #     git@git.work.deeplace.md/deeplace/infrastructure/drupal/<module>
@@ -20,7 +19,8 @@
 #     drush ddl <module>
 #
 # Usage:
-#   drush_module.py --gitdir=./
+#   drush_module.py
+#   --gitdir=./
 #   --archive-dir=/work/www/drupalupdates/archive/mywebform/
 #   --release-base-url=http://gitlab.deeplace.md/project/mywebform/tags/{tag}
 #   --archive-base-url=http://drupalupdates.deeplace.md/archive/mywebform/mywebform-{tag}
@@ -48,13 +48,15 @@ def main():
     try:
         args = getArgs(logger)
         if args['tag'] in getTagList():
-            createArchive(args)
+            createArchive(args['tag'], args['archive_dir'])
             writeInfoToXML(args)
-            logger.info("Created xml and archive for {0}".format(args['tag']))
+            logger.info("Created xml and archive for {0}-{1}".format(
+                args['module'],
+                args['tag']))
         else:
             logger.warning("Invalid tag for this module")
     except Exception as exc:
-        logger.error("{0} - {1}".format(type(exc), exc.args))
+        logger.error("{0}: {1}".format(type(exc), exc.args))
 
 
 def getArgs(logger):
@@ -77,42 +79,35 @@ def getArgs(logger):
     parser = argparse.ArgumentParser(
             description='Connect deeplace Drupal modules')
     parser.add_argument(
-        '--gitdir',
-        nargs='?',
-        help='Path to repository',
-        default='./')
+        '--gitdir', nargs='?',
+        help='Path to git repository', default='./')
     parser.add_argument(
-        '--archive-dir',
-        nargs='?',
+        '--archive-dir', nargs='?',
         help='Path to archive storage',
-        type=str,
         default="/work/www/drupalupdates/archive/mywebform/")
     parser.add_argument(
-        '--release-base-url',
-        nargs='?',
+        '--release-base-url', nargs='?',
         help='Release url',
-        type=str,
         default="http://gitlab.deeplace.md/project/mywebform/tags/7.x")
     parser.add_argument(
-        '--archive-base-url',
-        nargs='?',
+        '--archive-base-url', nargs='?',
         help='Url for download archive',
-        type=str,
-        default="http://drupalupdates.deeplace.md/archive/mywebform/mywebform-7.x")
+        default="http://drupalupdates.deeplace.md/archive\
+/mywebform/mywebform-7.x")
     parser.add_argument(
-        '--base-xml-dir',
-        nargs='?',
+        '--base-xml-dir', nargs='?',
         help='Path to xml storage',
-        type=str,
         default="/work/www/drupalupdates/release-history/mywebform")
     args = vars(parser.parse_args())
     try:
-        tag = re.findall(r"\b[6-8]\.x\S*", args['release_base_url'])
+        module = args['archive_base_url'].split("/")
+        tag = re.findall(r"\b[6-8]\.x\S*", module[len(module) - 1])
+        module = module[len(module) - 2]
         args['tag'] = tag[0]
+        args['module'] = module
         return args
     except Exception as e:
-        logger.error("Unvalid args for script - {0} - {1}".format(type(e),
-                                                                  e.args))
+        logger.error("{0}: {1}".format(type(e), e.args))
         return False
 
 
@@ -127,16 +122,11 @@ def getTagList():
             empty list if not.
 
     """
-    tags = subprocess.check_output("git branch",
-                                   shell=True
-                                   ).decode("utf-8").strip()
-    if tags not in [" ", "\n"]:
-        tags = re.findall(r"\b[6-8]\.x\S*", tags)
-        return tags
-    return []
+    tags = subprocess.check_output("git branch", shell=True).decode("utf-8")
+    return re.findall(r"\b[6-8]\.x\S*", tags)
 
 
-def createArchive(args):
+def createArchive(tag, archive_dir):
     """ Create archive with files for tag from parameters.
 
         Using `git archive` creates archive in format <tag>.tar.gz.
@@ -151,8 +141,8 @@ def createArchive(args):
     """
     os.chdir("..")
     subprocess.call("git archive {0} --format=tar.gz\
-                     --output={1}/{0}.tar.gz".format(args['tag'],
-                                                     args['archive_dir']),
+                     --output={1}/{0}.tar.gz".format(tag,
+                                                     archive_dir),
                     shell=True)
     os.chdir("drush_module")
 
@@ -171,8 +161,8 @@ def writeInfoToXML(args):
             xml - muwebform-7.x.xml
 
     """
-    info = getInfo(args['tag'])
-    filename = "{0}-{1}.xml".format(info['name'].replace(" ", "").lower(),
+    info = getInfo(args['tag'], args['module'])
+    filename = "{0}-{1}.xml".format(info['short_name'],
                                     info['core'])
     with open("{0}/{1}".format(args['base_xml_dir'], filename), "w") as file:
         header = '<?xml version="1.0" encoding="UTF-8"?>'
@@ -185,17 +175,17 @@ def writeInfoToXML(args):
         file.write(ET.tostring(project, "utf-8").decode("utf-8"))
 
 
-def getInfo(tag):
+def getInfo(tag, module):
     """ Get information about version.
 
         Read file <module_name>.info and gets all information from
         this file. Create dictionary with these parameters.
 
         Parameters:
-        str(tag) - version of module
+        str     tag     version of module
 
         Returns:
-        dict(info)
+        dict    info
 
         Example:
         mywebform.info:
@@ -209,21 +199,23 @@ def getInfo(tag):
              'description': 'Defines a custom webform.',
              'core': '7.x',
              'name': 'My webform',
-             'version': '7.x-1.0'
+             'version': '7.x-1.0',
+             'short_name': 'mywebform',
+             'version_major': '1',
+             'version_patch': '0'
              }
 
     """
     subprocess.call("git checkout {0}".format(tag), shell=True)
-    with open("../mywebform.info") as file:
+    with open("../{0}.info".format(module), "r") as file:
         temp = file.read().split("\n")
         temp = list(filter(None, temp))
         info = {tmp.split(" = ")[0].replace("\"", ""):
                 tmp.split(" = ")[1].replace("\"", "") for tmp in temp
                 }
-        info['short_name'] = info['name'].replace(" ", "").lower()
+        info['short_name'] = module
         info['version_major'] = info["version"].split("-")[1].split(".")[0]
         info['version_patch'] = info["version"].split("-")[1].split(".")[1]
-        # print(info)
     subprocess.call("git checkout master", shell=True)
     return info
 
@@ -318,8 +310,9 @@ def setReleases(project, info, args):
     """ Set releases tags to .xml file.
 
         Parameters:
-            xml.etree.ElementTree(project)
-            dict(info)
+            xml.etree.ElementTree   project
+            dict                    info        information about module
+            dict                    args        arguments from command prompt
 
         Example:
             <releases>
@@ -392,15 +385,14 @@ def setReleases(project, info, args):
     date = ET.SubElement(release, "date")
     date.text = str(int(time.time()))
 
+    path = "{0}/{1}.tar.gz".format(args['archive_dir'],
+                                   info['core'])
+
     mdhash = ET.SubElement(release, "mdhash")
-    mdhash.text = hashlib.md5(open("{1}/{0}.tar.gz".format(
-                    info['core'],
-                    args['archive_dir']), 'rb').read()).hexdigest()
+    mdhash.text = hashlib.md5(open(path, 'rb').read()).hexdigest()
 
     filesize = ET.SubElement(release, "filesize")
-    filesize.text = str(os.path.getsize(
-        "{1}/{0}.tar.gz".format(info['core'],
-                                args['archive_dir'])))
+    filesize.text = str(os.path.getsize(path))
 
     files = ET.SubElement(release, "files")
     file = ET.SubElement(files, "file")
@@ -409,13 +401,9 @@ def setReleases(project, info, args):
     archive_type = ET.SubElement(file, "archive_type")
     archive_type.text = "tar.gz"
     md5 = ET.SubElement(file, "md5")
-    md5.text = hashlib.md5(open("{1}/{0}.tar.gz".format(
-                    info['core'],
-                    args['archive_dir']), 'rb').read()).hexdigest()
+    md5.text = hashlib.md5(open(path, 'rb').read()).hexdigest()
     size = ET.SubElement(file, "size")
-    size.text = str(os.path.getsize(
-        "{1}/{0}.tar.gz".format(info['core'],
-                                args['archive_dir'])))
+    size.text = str(os.path.getsize(path))
     filedata = ET.SubElement(file, "filedata")
     filedata.text = str(int(time.time()))
 
