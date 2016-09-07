@@ -51,8 +51,7 @@ def main():
             createArchive(args['tag'], args['archive_dir'])
             writeInfoToXML(args)
             logger.info("Created xml and archive for {0}-{1}".format(
-                args['module'],
-                args['tag']))
+                args['module'], args['tag']))
         else:
             logger.warning("Invalid tag for this module")
     except Exception as exc:
@@ -105,6 +104,8 @@ def getArgs(logger):
         module = module[len(module) - 2]
         args['tag'] = tag[0]
         args['module'] = module
+        if args['archive_dir'][len(args['archive_dir']) - 1] != '/':
+            args['archive_dir'] = args['archive_dir'] + '/'
         return args
     except Exception as e:
         logger.error("{0}: {1}".format(type(e), e.args))
@@ -122,7 +123,7 @@ def getTagList():
             empty list if not.
 
     """
-    tags = subprocess.check_output("git branch", shell=True).decode("utf-8")
+    tags = subprocess.check_output("git branch", shell=True).decode()
     return re.findall(r"\b[6-8]\.x\S*", tags)
 
 
@@ -141,8 +142,8 @@ def createArchive(tag, archive_dir):
     """
     os.chdir("..")
     subprocess.call("git archive {0} --format=tar.gz\
-                     --output={1}/{0}.tar.gz".format(tag,
-                                                     archive_dir),
+                     --output={1}{0}.tar.gz".format(tag,
+                                                    archive_dir),
                     shell=True)
     os.chdir("drush_module")
 
@@ -385,8 +386,8 @@ def setReleases(project, info, args):
     date = ET.SubElement(release, "date")
     date.text = str(int(time.time()))
 
-    path = "{0}/{1}.tar.gz".format(args['archive_dir'],
-                                   info['core'])
+    path = "{0}{1}.tar.gz".format(args['archive_dir'],
+                                  info['core'])
 
     mdhash = ET.SubElement(release, "mdhash")
     mdhash.text = hashlib.md5(open(path, 'rb').read()).hexdigest()
