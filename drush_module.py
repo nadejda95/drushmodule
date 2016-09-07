@@ -119,6 +119,10 @@ def getTagList(logger, tag):
         Using `git branch` gets all branches of repository. Find
         branches looks like 7.x or 6.x, creates a list with them.
 
+        Parameters:
+        logging     logger
+        str         tag         version of module
+
         Return:
             list of tags if exist tags like 7.x or 6.x and
             empty list if not.
@@ -145,7 +149,10 @@ def createArchive(logger, tag, archive_dir, module):
         Using `git archive` creates archive in format <tag>.tar.gz.
 
         Parameters:
-        dict    args    arguments from command prompt
+        logging     logger
+        str         tag             version of module
+        str         archive_dir     directory for writing archive
+        str         module          name of module
 
         Example:
         tag - 7.x
@@ -180,7 +187,8 @@ def writeInfoToXML(logger, args):
             https://updates.drupal.org/release-history/migrate/7.x
 
         Parameters:
-        dict    args    arguments from command prompt
+        logging     logger
+        dict        args    arguments from command prompt
 
         Example:
             args['tag'] - 7.x
@@ -228,7 +236,9 @@ def getInfo(logger, tag, module):
         this file. Create dictionary with these parameters.
 
         Parameters:
-        str     tag     version of module
+        logging     logger
+        str         tag         version of module
+        str         module      name of module
 
         Returns:
         dict    info
@@ -283,6 +293,7 @@ def setTitle(logger, project, info, link):
         format for title tags.
 
         Parameters:
+        logging                 logger
         xml.etree.ElementTree   project
         dict                    info        information about module
         str                     link        release link
@@ -297,7 +308,7 @@ def setTitle(logger, project, info, link):
             <supported_major>1</supported_major>
             <default_major>1</default_major>
             <project_status>published</project_status>
-            <link>http://gitlab.deeplace.md/project/mywebform/tags/{tag}</link>
+            <link>http://gitlab.deeplace.md/project/mywebform/tags/7.x</link>
 
     """
     try:
@@ -325,6 +336,7 @@ def setTerms(logger, project):
     """ Set terms tags to .xml file.
 
         Parameters:
+        logger                  logger
         xml.etree.ElementTree   project
 
         Example:
@@ -376,9 +388,10 @@ def setReleases(logger, project, info, args):
     """ Set releases tags to .xml file.
 
         Parameters:
-            xml.etree.ElementTree   project
-            dict                    info        information about module
-            dict                    args        arguments from command prompt
+        logging                 logger
+        xml.etree.ElementTree   project
+        dict                    info        information about module
+        dict                    args        arguments from command prompt
 
         Example:
             <releases>
@@ -396,7 +409,7 @@ def setReleases(logger, project, info, args):
                     <filesize>39166</filesize>
                     <files>
                         <file>
-                            <url>http://gitlab.deeplace.md/project/mywebform/tags/{tag}</url>
+                            <url>http://gitlab.deeplace.md/project/mywebform/tags/7.x</url>
                             <archive_type>tar.gz</archive_type>
                             <md5>08a78d6c56a6a4daa9c943fe1ef3e270</md5>
                             <size>39166</size>
