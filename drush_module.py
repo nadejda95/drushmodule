@@ -51,8 +51,9 @@ def main():
             createArchive(logger, args['tag'],
                           args['archive_dir'], args['module'])
             writeInfoToXML(logger, args)
+            logger.info("Finish: OK!")
         else:
-            logger.warning("Invalid tag for this module")
+            logger.warning("Finish: FAILED!")
     except Exception as exc:
         logger.error("{0}: {1}".format(type(exc), exc.args))
 
@@ -91,8 +92,7 @@ def getArgs(logger):
         parser.add_argument(
             '--archive-base-url', nargs='?',
             help='Url for download archive',
-            default="http://drupalupdates.deeplace.md/archive\
-/mywebform/mywebform-7.x")
+            default="http://drupalupdates.deeplace.md/archive/mywebform/mywebform-7.x")
         parser.add_argument(
             '--base-xml-dir', nargs='?',
             help='Path to xml storage',
@@ -105,10 +105,10 @@ def getArgs(logger):
         args['module'] = module
         if args['archive_dir'][len(args['archive_dir']) - 1] != '/':
             args['archive_dir'] = args['archive_dir'] + '/'
-        logger.info("Getting args: OK!")
+        logger.info("Get args: OK!")
         return args
     except Exception:
-        logger.error("Getting args: FAILED!")
+        logger.error("Get args: FAILED!")
         raise
         return False
 
@@ -131,6 +131,7 @@ def getTagList(logger, tag):
         if tag in tags:
             logger.info("Find {0} in repository: OK!".format(tag))
             return tag
+        raise Exception
     except Exception:
         logger.error("Find {0} in repository: FAILED!".format(
             tag))
@@ -159,17 +160,17 @@ def createArchive(logger, tag, archive_dir, module):
                 "Check directory [{0}] for archive: OK!".format(archive_dir))
         except OSError:
             logger.error(
-                "Check directory [{0}] for archive: FAILED!".format(archive_dir))
+                "Check directory [{0}] for archive: FAILED!".format(
+                    archive_dir))
             raise
         subprocess.call("git archive {0} --format=tar.gz\
                          --output={1}{0}.tar.gz".format(tag,
                                                         archive_dir),
                         shell=True)
         os.chdir("drush_module")
-        logger.info("Creating archive for {0}-{1}: OK!".format(module, tag))
+        logger.info("Create archive for {0}-{1}: OK!".format(module, tag))
     except Exception:
-        logger.error(
-            "Creating archive for {0}-{1}: FAILED!".format(module, tag))
+        logger.error("Create archive for {0}-{1}: FAILED!".format(module, tag))
         raise
 
 
@@ -192,22 +193,31 @@ def writeInfoToXML(logger, args):
                                     info['core'])
     try:
         os.makedirs(args['base_xml_dir'], exist_ok=True)
+        logger.info(
+            "Check directory [{0}] for xml file: OK!".format(
+                args['base_xml_dir']))
         with open("{0}/{1}".format(args['base_xml_dir'],
                                    filename), "w") as file:
             header = '<?xml version="1.0" encoding="UTF-8"?>'
             file.write(header)
             project = ET.Element("project")
             project.set("xmlns:dc", "http://purl.org/dc/elements/1.1/")
-            setTitle(project, info, args['release_base_url'])
-            setTerms(project)
-            setReleases(project, info, args)
+            setTitle(logger, project, info, args['release_base_url'])
+            setTerms(logger, project)
+            setReleases(logger, project, info, args)
             file.write(ET.tostring(project, "utf-8").decode("utf-8"))
+            logger.info("Create xml for {0}-{1}: OK!".format(args['module'],
+                                                             args['tag']))
     except OSError:
-        logger.error("Unable to create xml directory {0}".format(
-            args['base_xml_dir']))
+        logger.error(
+            "Check directory [{0}] for xml file: FAILED!".format(
+                args['base_xml_dir']))
         raise
     except Exception:
-        logger.error("Unable to create xml file")
+        logger.error(
+                "Create xml for {0}-{1}: FAILED!".format(
+                    args['module'],
+                    args['tag']))
         raise
 
 
@@ -256,16 +266,17 @@ def getInfo(logger, tag, module):
             info['version_patch'] = info["version"].split("-")[1].split(".")[1]
         subprocess.call(
             "git checkout master &>/dev/null", shell=True)
+        logger.info("Get information about module: OK!")
         return info
     except subprocess.SubprocessError:
-        logger.error("Unable to changhe branch for to get info")
+        logger.error("Checkout branch: FAILED!")
         raise
     except Exception:
-        logger.error("Unable to get info about module")
+        logger.error("Get information about module: FAILED!")
         raise
 
 
-def setTitle(project, info, link):
+def setTitle(logger, project, info, link):
     """ Set title tags to .xml file.
 
         Creates list of tags and values and generate xml
@@ -289,23 +300,28 @@ def setTitle(project, info, link):
             <link>http://gitlab.deeplace.md/project/mywebform/tags/{tag}</link>
 
     """
-    fields = [["title", info['name']],
-              ["short_name", info['short_name']],
-              ["dc:creator", "Deeplace"],
-              ["type", "project_module"],
-              ["api_version", info['core']],
-              ["recommended_major", info['version_major']],
-              ["supported_major", info['version_major']],
-              ["default_major", info['version_major']],
-              ["project_status", "published"],
-              ["link", link]
-              ]
-    for field in fields:
-        block = ET.SubElement(project, field[0])
-        block.text = field[1]
+    try:
+        fields = [["title", info['name']],
+                  ["short_name", info['short_name']],
+                  ["dc:creator", "Deeplace"],
+                  ["type", "project_module"],
+                  ["api_version", info['core']],
+                  ["recommended_major", info['version_major']],
+                  ["supported_major", info['version_major']],
+                  ["default_major", info['version_major']],
+                  ["project_status", "published"],
+                  ["link", link]
+                  ]
+        for field in fields:
+            block = ET.SubElement(project, field[0])
+            block.text = field[1]
+        logger.info("Set title to xml file: OK!")
+    except Exception:
+        logger.error("Set title to xml file: FAILED!")
+        raise
 
 
-def setTerms(project):
+def setTerms(logger, project):
     """ Set terms tags to .xml file.
 
         Parameters:
@@ -336,22 +352,27 @@ def setTerms(project):
             </terms>
 
     """
-    terms = ET.SubElement(project, "terms")
-    terms_content = [["Project", "Modules"],
-                     ["Maintenance status", "Seeking new maintaner"],
-                     ["Development status", "No further development"],
-                     ["Module categories", "Content"],
-                     ["Module categories", "Import/export"],
-                     ]
-    for content in terms_content:
-        term = ET.SubElement(terms, "term")
-        name = ET.SubElement(term, "name")
-        name.text = content[0]
-        value = ET.SubElement(term, "value")
-        value.text = content[1]
+    try:
+        terms = ET.SubElement(project, "terms")
+        terms_content = [["Project", "Modules"],
+                         ["Maintenance status", "Seeking new maintaner"],
+                         ["Development status", "No further development"],
+                         ["Module categories", "Content"],
+                         ["Module categories", "Import/export"],
+                         ]
+        for content in terms_content:
+            term = ET.SubElement(terms, "term")
+            name = ET.SubElement(term, "name")
+            name.text = content[0]
+            value = ET.SubElement(term, "value")
+            value.text = content[1]
+        logger.info("Set terms to xml file: OK!")
+    except Exception:
+        logger.error("Set terms to xml file: FAILED!")
+        raise
 
 
-def setReleases(project, info, args):
+def setReleases(logger, project, info, args):
     """ Set releases tags to .xml file.
 
         Parameters:
@@ -400,69 +421,74 @@ def setReleases(project, info, args):
             </releases>
 
     """
-    releases = ET.SubElement(project, "releases")
-    release = ET.SubElement(releases, "release")
+    try:
+        releases = ET.SubElement(project, "releases")
+        release = ET.SubElement(releases, "release")
 
-    name = ET.SubElement(release, "name")
-    name.text = "{0} {1}".format(info['short_name'], info["version"])
+        name = ET.SubElement(release, "name")
+        name.text = "{0} {1}".format(info['short_name'], info["version"])
 
-    version = ET.SubElement(release, "version")
-    version.text = info["version"]
+        version = ET.SubElement(release, "version")
+        version.text = info["version"]
 
-    tag = ET.SubElement(release, "tag")
-    tag.text = info["version"]
+        tag = ET.SubElement(release, "tag")
+        tag.text = info["version"]
 
-    version_major = ET.SubElement(release, "version_major")
-    version_major.text = info["version_major"]
+        version_major = ET.SubElement(release, "version_major")
+        version_major.text = info["version_major"]
 
-    version_patch = ET.SubElement(release, "version_patch")
-    version_patch.text = info["version_patch"]
+        version_patch = ET.SubElement(release, "version_patch")
+        version_patch.text = info["version_patch"]
 
-    status = ET.SubElement(release, "status")
-    status.text = "published"
+        status = ET.SubElement(release, "status")
+        status.text = "published"
 
-    release_link = ET.SubElement(release, "release_link")
-    release_link.text = args['release_base_url']
+        release_link = ET.SubElement(release, "release_link")
+        release_link.text = args['release_base_url']
 
-    download_link = ET.SubElement(release, "download_link")
-    download_link.text = args['archive_base_url']
+        download_link = ET.SubElement(release, "download_link")
+        download_link.text = args['archive_base_url']
 
-    date = ET.SubElement(release, "date")
-    date.text = str(int(time.time()))
+        date = ET.SubElement(release, "date")
+        date.text = str(int(time.time()))
 
-    path = "{0}{1}.tar.gz".format(args['archive_dir'],
-                                  info['core'])
+        path = "{0}{1}.tar.gz".format(args['archive_dir'],
+                                      info['core'])
 
-    mdhash = ET.SubElement(release, "mdhash")
-    mdhash.text = hashlib.md5(open(path, 'rb').read()).hexdigest()
+        mdhash = ET.SubElement(release, "mdhash")
+        mdhash.text = hashlib.md5(open(path, 'rb').read()).hexdigest()
 
-    filesize = ET.SubElement(release, "filesize")
-    filesize.text = str(os.path.getsize(path))
+        filesize = ET.SubElement(release, "filesize")
+        filesize.text = str(os.path.getsize(path))
 
-    files = ET.SubElement(release, "files")
-    file = ET.SubElement(files, "file")
-    url = ET.SubElement(file, "url")
-    url.text = args['release_base_url']
-    archive_type = ET.SubElement(file, "archive_type")
-    archive_type.text = "tar.gz"
-    md5 = ET.SubElement(file, "md5")
-    md5.text = hashlib.md5(open(path, 'rb').read()).hexdigest()
-    size = ET.SubElement(file, "size")
-    size.text = str(os.path.getsize(path))
-    filedata = ET.SubElement(file, "filedata")
-    filedata.text = str(int(time.time()))
+        files = ET.SubElement(release, "files")
+        file = ET.SubElement(files, "file")
+        url = ET.SubElement(file, "url")
+        url.text = args['release_base_url']
+        archive_type = ET.SubElement(file, "archive_type")
+        archive_type.text = "tar.gz"
+        md5 = ET.SubElement(file, "md5")
+        md5.text = hashlib.md5(open(path, 'rb').read()).hexdigest()
+        size = ET.SubElement(file, "size")
+        size.text = str(os.path.getsize(path))
+        filedata = ET.SubElement(file, "filedata")
+        filedata.text = str(int(time.time()))
 
-    terms = ET.SubElement(release, "terms")
-    terms_content = [["Release type", "Security update"],
-                     ["Release type", "Bug fixes"],
-                     ["Release type", "New features"]
-                     ]
-    for content in terms_content:
-        term = ET.SubElement(terms, "term")
-        name = ET.SubElement(term, "name")
-        name.text = content[0]
-        value = ET.SubElement(term, "value")
-        value.text = content[1]
+        terms = ET.SubElement(release, "terms")
+        terms_content = [["Release type", "Security update"],
+                         ["Release type", "Bug fixes"],
+                         ["Release type", "New features"]
+                         ]
+        for content in terms_content:
+            term = ET.SubElement(terms, "term")
+            name = ET.SubElement(term, "name")
+            name.text = content[0]
+            value = ET.SubElement(term, "value")
+            value.text = content[1]
+        logger.info("Set content to xml file: OK!")
+    except Exception:
+        logger.error("Set content to xml file: FAILED!")
+        raise
 
 
 if __name__ == "__main__":
