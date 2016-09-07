@@ -41,17 +41,16 @@ def main():
         modules.
 
     """
-    logging.basicConfig(format='%(levelname)s [%(asctime)s]  %(message)s',
-                        level=logging.DEBUG,
-                        filename='mylog.log')
+    logging.basicConfig(
+        format='LINE:%(lineno)-4s %(levelname)-6s [%(asctime)s]  %(message)s',
+        level=logging.DEBUG)
     logger = logging.getLogger("myLog")
     try:
         args = getArgs(logger)
-        if args['tag'] in getTagList():
-            createArchive(args['tag'], args['archive_dir'])
-            writeInfoToXML(args)
-            logger.info("Created xml and archive for {0}-{1}".format(
-                args['module'], args['tag']))
+        if getTagList(logger, args['tag']):
+            createArchive(logger, args['tag'],
+                          args['archive_dir'], args['module'])
+            writeInfoToXML(logger, args)
         else:
             logger.warning("Invalid tag for this module")
     except Exception as exc:
@@ -75,30 +74,30 @@ def getArgs(logger):
         dict    args from command promt
 
     """
-    parser = argparse.ArgumentParser(
-            description='Connect deeplace Drupal modules')
-    parser.add_argument(
-        '--gitdir', nargs='?',
-        help='Path to git repository', default='./')
-    parser.add_argument(
-        '--archive-dir', nargs='?',
-        help='Path to archive storage',
-        default="/work/www/drupalupdates/archive/mywebform/")
-    parser.add_argument(
-        '--release-base-url', nargs='?',
-        help='Release url',
-        default="http://gitlab.deeplace.md/project/mywebform/tags/7.x")
-    parser.add_argument(
-        '--archive-base-url', nargs='?',
-        help='Url for download archive',
-        default="http://drupalupdates.deeplace.md/archive\
-/mywebform/mywebform-7.x")
-    parser.add_argument(
-        '--base-xml-dir', nargs='?',
-        help='Path to xml storage',
-        default="/work/www/drupalupdates/release-history/mywebform")
-    args = vars(parser.parse_args())
     try:
+        parser = argparse.ArgumentParser(
+                description='Connect deeplace Drupal modules')
+        parser.add_argument(
+            '--gitdir', nargs='?',
+            help='Path to git repository', default='./')
+        parser.add_argument(
+            '--archive-dir', nargs='?',
+            help='Path to archive storage',
+            default="/work/www/drupalupdates/archive/mywebform/")
+        parser.add_argument(
+            '--release-base-url', nargs='?',
+            help='Release url',
+            default="http://gitlab.deeplace.md/project/mywebform/tags/7.x")
+        parser.add_argument(
+            '--archive-base-url', nargs='?',
+            help='Url for download archive',
+            default="http://drupalupdates.deeplace.md/archive\
+/mywebform/mywebform-7.x")
+        parser.add_argument(
+            '--base-xml-dir', nargs='?',
+            help='Path to xml storage',
+            default="/work/www/drupalupdates/release-history/mywebform")
+        args = vars(parser.parse_args())
         module = args['archive_base_url'].split("/")
         tag = re.findall(r"\b[6-8]\.x\S*", module[len(module) - 1])
         module = module[len(module) - 2]
@@ -106,13 +105,15 @@ def getArgs(logger):
         args['module'] = module
         if args['archive_dir'][len(args['archive_dir']) - 1] != '/':
             args['archive_dir'] = args['archive_dir'] + '/'
+        logger.info("Getting args: OK!")
         return args
-    except Exception as e:
-        logger.error("{0}: {1}".format(type(e), e.args))
+    except Exception:
+        logger.error("Getting args: FAILED!")
+        raise
         return False
 
 
-def getTagList():
+def getTagList(logger, tag):
     """ Get list of versions of module of current repository.
 
         Using `git branch` gets all branches of repository. Find
@@ -123,11 +124,21 @@ def getTagList():
             empty list if not.
 
     """
-    tags = subprocess.check_output("git branch", shell=True).decode()
-    return re.findall(r"\b[6-8]\.x\S*", tags)
+    try:
+        tags = subprocess.check_output(
+            "git branch 2>/dev/null", shell=True).decode()
+        tags = re.findall(r"\b[6-8]\.x\S*", tags)
+        if tag in tags:
+            logger.info("Find {0} in repository: OK!".format(tag))
+            return tag
+    except Exception:
+        logger.error("Find {0} in repository: FAILED!".format(
+            tag))
+        raise
+        return False
 
 
-def createArchive(tag, archive_dir):
+def createArchive(logger, tag, archive_dir, module):
     """ Create archive with files for tag from parameters.
 
         Using `git archive` creates archive in format <tag>.tar.gz.
@@ -140,15 +151,29 @@ def createArchive(tag, archive_dir):
         archive - 7.x.tar.gz
 
     """
-    os.chdir("..")
-    subprocess.call("git archive {0} --format=tar.gz\
-                     --output={1}{0}.tar.gz".format(tag,
-                                                    archive_dir),
-                    shell=True)
-    os.chdir("drush_module")
+    try:
+        os.chdir("..")
+        try:
+            os.makedirs(archive_dir, exist_ok=True)
+            logger.info(
+                "Check directory [{0}] for archive: OK!".format(archive_dir))
+        except OSError:
+            logger.error(
+                "Check directory [{0}] for archive: FAILED!".format(archive_dir))
+            raise
+        subprocess.call("git archive {0} --format=tar.gz\
+                         --output={1}{0}.tar.gz".format(tag,
+                                                        archive_dir),
+                        shell=True)
+        os.chdir("drush_module")
+        logger.info("Creating archive for {0}-{1}: OK!".format(module, tag))
+    except Exception:
+        logger.error(
+            "Creating archive for {0}-{1}: FAILED!".format(module, tag))
+        raise
 
 
-def writeInfoToXML(args):
+def writeInfoToXML(logger, args):
     """ Create .xml file and write information about modules.
         Standart for .xml:
             https://updates.drupal.org/release-history/migrate/7.x
@@ -162,21 +187,31 @@ def writeInfoToXML(args):
             xml - muwebform-7.x.xml
 
     """
-    info = getInfo(args['tag'], args['module'])
+    info = getInfo(logger, args['tag'], args['module'])
     filename = "{0}-{1}.xml".format(info['short_name'],
                                     info['core'])
-    with open("{0}/{1}".format(args['base_xml_dir'], filename), "w") as file:
-        header = '<?xml version="1.0" encoding="UTF-8"?>'
-        file.write(header)
-        project = ET.Element("project")
-        project.set("xmlns:dc", "http://purl.org/dc/elements/1.1/")
-        setTitle(project, info, args['release_base_url'])
-        setTerms(project)
-        setReleases(project, info, args)
-        file.write(ET.tostring(project, "utf-8").decode("utf-8"))
+    try:
+        os.makedirs(args['base_xml_dir'], exist_ok=True)
+        with open("{0}/{1}".format(args['base_xml_dir'],
+                                   filename), "w") as file:
+            header = '<?xml version="1.0" encoding="UTF-8"?>'
+            file.write(header)
+            project = ET.Element("project")
+            project.set("xmlns:dc", "http://purl.org/dc/elements/1.1/")
+            setTitle(project, info, args['release_base_url'])
+            setTerms(project)
+            setReleases(project, info, args)
+            file.write(ET.tostring(project, "utf-8").decode("utf-8"))
+    except OSError:
+        logger.error("Unable to create xml directory {0}".format(
+            args['base_xml_dir']))
+        raise
+    except Exception:
+        logger.error("Unable to create xml file")
+        raise
 
 
-def getInfo(tag, module):
+def getInfo(logger, tag, module):
     """ Get information about version.
 
         Read file <module_name>.info and gets all information from
@@ -207,18 +242,27 @@ def getInfo(tag, module):
              }
 
     """
-    subprocess.call("git checkout {0}".format(tag), shell=True)
-    with open("../{0}.info".format(module), "r") as file:
-        temp = file.read().split("\n")
-        temp = list(filter(None, temp))
-        info = {tmp.split(" = ")[0].replace("\"", ""):
-                tmp.split(" = ")[1].replace("\"", "") for tmp in temp
-                }
-        info['short_name'] = module
-        info['version_major'] = info["version"].split("-")[1].split(".")[0]
-        info['version_patch'] = info["version"].split("-")[1].split(".")[1]
-    subprocess.call("git checkout master", shell=True)
-    return info
+    try:
+        subprocess.call(
+            "git checkout {0} &>/dev/null".format(tag), shell=True)
+        with open("../{0}.info".format(module), "r") as file:
+            temp = file.read().split("\n")
+            temp = list(filter(None, temp))
+            info = {tmp.split(" = ")[0].replace("\"", ""):
+                    tmp.split(" = ")[1].replace("\"", "") for tmp in temp
+                    }
+            info['short_name'] = module
+            info['version_major'] = info["version"].split("-")[1].split(".")[0]
+            info['version_patch'] = info["version"].split("-")[1].split(".")[1]
+        subprocess.call(
+            "git checkout master &>/dev/null", shell=True)
+        return info
+    except subprocess.SubprocessError:
+        logger.error("Unable to changhe branch for to get info")
+        raise
+    except Exception:
+        logger.error("Unable to get info about module")
+        raise
 
 
 def setTitle(project, info, link):
